@@ -108,10 +108,10 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return eventList;
     }
     
-    public List<TransitionEvent> getTransitionEvents(long from, long to) {
+    public List<TransitionEvent> getTransitionEvents(long fromTimestamp, long toTimestamp) {
         List<TransitionEvent> eventList = new ArrayList<TransitionEvent>();
         String selectQuery = "SELECT * FROM " + TABLE_TRANSITIONS + " WHERE KEY_TIMESTAMP >= ? AND KEY_TIMESTAMP <= ? ";
-        String [] selectArgs = new String[] {"", ""};
+        String [] selectArgs = new String[] {String.valueOf(fromTimestamp), String.valueOf(toTimestamp)};
         
         SQLiteDatabase db = getWritableDatabase();
         Cursor cursor = db.rawQuery(selectQuery, selectArgs);
