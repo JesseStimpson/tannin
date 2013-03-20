@@ -10,19 +10,23 @@ public class TransitionEvent {
     private int id;
     private long timestamp;
     private int connectivityType; // one of ConnectivityManager.TYPE_*, or -1 for "none"
+    private int wifiAvailable; // TBD
     
-    public TransitionEvent(int id, long timestamp, int connectivityType) {
+    public TransitionEvent(int id, long timestamp, int connectivityType, int wifiAvailable) {
         this.id = id;
         this.timestamp = timestamp;
         this.connectivityType = connectivityType;
+        this.wifiAvailable = wifiAvailable;
     }
     
     public int getId() { return id; }
     public long getTimestamp() { return timestamp; }
     public int getConnectivityType() { return connectivityType; }
+    public int getWifiAvailable() { return wifiAvailable; }
     
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
     public void setToType(int connectivityType) { this.connectivityType = connectivityType; }
+    public void setWifiAvailability(int wifiAvailable) { this.wifiAvailable = wifiAvailable; }
     
     private String connectivityString(int type) {
         switch(type) {

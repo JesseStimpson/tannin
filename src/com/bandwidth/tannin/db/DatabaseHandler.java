@@ -21,16 +21,19 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String KEY_ID = "id";
     private static final String KEY_TIMESTAMP = "timestamp";
     private static final String KEY_CONNECTIVITY_TYPE = "connectivity_type";
+    private static final String KEY_WIFI_AVAILABLE = "wifi_available";
     
     private static final String[] TRANSITIONS_PROJECTION = new String[]{
         KEY_ID,
         KEY_TIMESTAMP,
-        KEY_CONNECTIVITY_TYPE
+        KEY_CONNECTIVITY_TYPE,
+        KEY_WIFI_AVAILABLE
     };
     
     private static final int TRANSITIONS_COLUMN_ID = 0;
     private static final int TRANSITIONS_COLUMN_TIMESTAMP = 1;
     private static final int TRANSITIONS_COLUMN_CONNECTIVITY_TYPE = 2;
+    private static final int TRANSITIONS_COLUMN_WIFI_AVAILABLE = 3;
     
     public DatabaseHandler(Context context) {
         super(context, NAME, null, VERSION);
@@ -41,7 +44,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         String CREATE_TRANSITIONS_TABLE = "CREATE TABLE " + TABLE_TRANSITIONS + "("
                 + KEY_ID + " INTEGER PRIMARY KEY, " 
                 + KEY_TIMESTAMP + " INTEGER, "
-                + KEY_CONNECTIVITY_TYPE + " INTEGER" + ")";
+                + KEY_CONNECTIVITY_TYPE + " INTEGER, "
+        		+ KEY_WIFI_AVAILABLE + " INTEGER" + ")";
         db.execSQL(CREATE_TRANSITIONS_TABLE);
     }
 
@@ -73,9 +77,10 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         int idInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_ID));
         long timestamp = Long.parseLong(cursor.getString(TRANSITIONS_COLUMN_TIMESTAMP));
         int connectivityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_CONNECTIVITY_TYPE));
+        int wifiAvailabilityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_WIFI_AVAILABLE));
         
         TransitionEvent event = new TransitionEvent(idInt, timestamp, 
-                connectivityInt);
+                connectivityInt, wifiAvailabilityInt);
         return event;
     }
     
@@ -91,10 +96,12 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 int idInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_ID));
                 long timestamp = Long.parseLong(cursor.getString(TRANSITIONS_COLUMN_TIMESTAMP));
                 int connectivityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_CONNECTIVITY_TYPE));
+                int wifiAvailabilityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_WIFI_AVAILABLE));
                 
                 TransitionEvent event = new TransitionEvent(idInt, 
                         timestamp,
-                        connectivityInt);
+                        connectivityInt,
+                        wifiAvailabilityInt);
                 eventList.add(event);
             } while(cursor.moveToNext());
         }

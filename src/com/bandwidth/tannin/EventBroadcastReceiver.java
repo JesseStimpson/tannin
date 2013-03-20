@@ -30,10 +30,11 @@ public class EventBroadcastReceiver extends BroadcastReceiver {
         ConnectivityManager conman = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo info = conman.getActiveNetworkInfo();
         int connType = -1;
+        int wifiAvailability = -1;
         if(info != null) {
             connType = info.getType();
         }
-        TransitionEvent event = new TransitionEvent(-1, System.currentTimeMillis(), connType);
+        TransitionEvent event = new TransitionEvent(-1, System.currentTimeMillis(), connType, wifiAvailability);
         mDbHandler.addTransitionEvent(event);
     }
 
