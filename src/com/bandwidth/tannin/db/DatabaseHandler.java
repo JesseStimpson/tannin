@@ -108,6 +108,31 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return eventList;
     }
     
+    public List<TransitionEvent> getTransitionEvents(long from, long to) {
+        List<TransitionEvent> eventList = new ArrayList<TransitionEvent>();
+        String selectQuery = "SELECT * FROM " + TABLE_TRANSITIONS + " WHERE KEY_TIMESTAMP >= ? AND KEY_TIMESTAMP <= ? ";
+        String [] selectArgs = new String[] {"", ""};
+        
+        SQLiteDatabase db = getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, selectArgs);
+        
+        if(cursor.moveToFirst()) {
+            do {
+                int idInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_ID));
+                long timestamp = Long.parseLong(cursor.getString(TRANSITIONS_COLUMN_TIMESTAMP));
+                int connectivityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_CONNECTIVITY_TYPE));
+                int wifiAvailabilityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_WIFI_AVAILABLE));
+                
+                TransitionEvent event = new TransitionEvent(idInt, 
+                        timestamp,
+                        connectivityInt,
+                        wifiAvailabilityInt);
+                eventList.add(event);
+            } while(cursor.moveToNext());
+        }
+        return eventList;
+    }
+    
     public int getTransitionEventCount() {
         String countQuery = "SELECT * FROM " + TABLE_TRANSITIONS;
         SQLiteDatabase db = getReadableDatabase();
