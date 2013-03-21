@@ -75,7 +75,6 @@ public class ViewDataRenderer extends RajawaliRenderer {
     List<DonutSegment> historySegments = new ArrayList<DonutSegment>();
     
     long initialDrawTime = 0L;
-    DonutSegment revealer = null;
     
     private float timestampToAngle(long timestamp) {
         Date date = new Date(timestamp);
@@ -145,10 +144,6 @@ public class ViewDataRenderer extends RajawaliRenderer {
         seg = new DonutSegment(0.f, fgInnerRadius, 0.f, (float)(2*Math.PI), new float[] {51f/255,51f/255,51f/255,1.f}, y, -1.2f);
         seg.setMaterial(material);
         addChild(seg);
-        
-        revealer = new DonutSegment(bgInRadius, fgOuterRadius, 0.f, (float)(2*Math.PI), new float[] {1.f,1.f,1.f,1.f}, y, -1.3f);
-        addChild(revealer);
-        initialDrawTime = SystemClock.elapsedRealtime();
     }
     
     private void drawWifiCoverage(int history) {
@@ -329,9 +324,5 @@ public class ViewDataRenderer extends RajawaliRenderer {
     @Override
     public void onDrawFrame(GL10 glUnused) {
         super.onDrawFrame(glUnused);
-        if(revealer != null) {
-            removeChild(revealer);
-            //revealer = new DonutSegment(bgInRadius, bgOutRadius, startAngle, endAngle, color, y, z)
-        }
     }
 }
