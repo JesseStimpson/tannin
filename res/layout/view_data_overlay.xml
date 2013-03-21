@@ -30,4 +30,24 @@
 
     </RelativeLayout>
 
+    <TextView
+        android:id="@+id/current_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/date_text"
+        android:layout_centerHorizontal="true"
+        android:paddingTop="162dp"
+        android:text="11:30P"
+        android:textColor="@color/light" />
+
+    <TextView
+        android:id="@+id/am12"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/date_text"
+        android:layout_centerHorizontal="true"
+        android:paddingTop="51dp"
+        android:text="12A"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
 </RelativeLayout>
