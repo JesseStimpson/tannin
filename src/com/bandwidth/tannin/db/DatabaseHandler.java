@@ -309,6 +309,44 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return eventList;
     }
     
+    public UnusedWifiEvent getFirstUnusedWifiEventBefore(long timestamp) {
+    	List<UnusedWifiEvent> eventList = new ArrayList<UnusedWifiEvent>();
+    	String selectQuery = "SELECT * FROM " + TABLE_UNUSED_WIFI + " WHERE " + KEY_TIMESTAMP + " < ?";
+    	String[] selectArgs = new String[] { String.valueOf(timestamp) };
+    	
+    	SQLiteDatabase db = getWritableDatabase();
+    	Cursor cursor = db.rawQuery(selectQuery, selectArgs);
+    	if(cursor.moveToLast()) {
+    		int idInt = Integer.parseInt(cursor.getString(UNUSED_WIFI_COLUMN_ID));
+    		long ts = Long.parseLong(cursor.getString(UNUSED_WIFI_COLUMN_TIMESTAMP));
+    		int unusedWifiInt = Integer.parseInt(cursor.getString(UNUSED_WIFI_COLUMN_WIFI_SECURITY));
+    		return new UnusedWifiEvent(idInt, ts, unusedWifiInt);
+    	}
+    	return null;
+    }
+    
+    public List<UnusedWifiEvent> getUnusedWifiEvents(long fromTimestamp, long toTimestamp) {
+    	List<UnusedWifiEvent> eventList = new ArrayList<UnusedWifiEvent>();
+    	String selectQuery = "SELECT * FROM " + TABLE_UNUSED_WIFI + " WHERE " + KEY_TIMESTAMP + " >= ? AND " + KEY_TIMESTAMP + " <= ?";
+    	String[] selectArgs = new String[] {String.valueOf(fromTimestamp), String.valueOf(toTimestamp)};
+    	
+    	SQLiteDatabase db = getWritableDatabase();
+    	Cursor cursor = db.rawQuery(selectQuery, selectArgs);
+    	
+    	if(cursor.moveToFirst()) {
+    		do {
+    			int idInt = Integer.parseInt(cursor.getString(UNUSED_WIFI_COLUMN_ID));
+    			long timestamp = Long.parseLong(cursor.getString(UNUSED_WIFI_COLUMN_TIMESTAMP));
+    			int unusedWifiInt = Integer.parseInt(cursor.getString(UNUSED_WIFI_COLUMN_WIFI_SECURITY));
+    			
+    			UnusedWifiEvent event = new UnusedWifiEvent(idInt, timestamp, unusedWifiInt);
+    			
+    			eventList.add(event);
+    		} while(cursor.moveToNext());
+    	}
+    	return eventList;
+    }
+    
     public List<CallEvent> getAllCallEvents() {
         List<CallEvent> eventList = new ArrayList<CallEvent>();
         String selectQuery = "SELECT * FROM " + TABLE_CALLS;

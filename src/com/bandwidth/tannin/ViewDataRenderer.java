@@ -12,6 +12,8 @@ import com.bandwidth.tannin.data.CallEvent;
 import com.bandwidth.tannin.data.CallInterval;
 import com.bandwidth.tannin.data.TransitionEvent;
 import com.bandwidth.tannin.data.TransitionInterval;
+import com.bandwidth.tannin.data.UnusedWifiEvent;
+import com.bandwidth.tannin.data.UnusedWifiInterval;
 import com.bandwidth.tannin.db.DatabaseHandler;
 import com.bandwidth.tannin.rajawali.Camera2D;
 import com.bandwidth.tannin.rajawali.DonutSegment;
@@ -68,6 +70,7 @@ public class ViewDataRenderer extends RajawaliRenderer {
     
     private float[] segmentColor = new float[] {80.f/255, 185.f/255, 72.f/255, 1.f};
     private float[] callColor = new float[] {0.f,0.f,0.f,0.5f};
+    private float[] openWifiColor = new float[] {224.f/255, 224.f/255, 224.f/255, 1.f};
     
     private float y = 0.f;
     
@@ -118,6 +121,7 @@ public class ViewDataRenderer extends RajawaliRenderer {
         
         drawBackground();
         drawWifiCoverage(0);
+        drawUnusedWifiCoverage(0);
         drawHistory();
         drawCallSegments();
         drawAnnotations();
@@ -155,7 +159,48 @@ public class ViewDataRenderer extends RajawaliRenderer {
             MyLog.d(i.getEvent().toString());
             boolean isWifi = i.getEvent().getConnectivityType() == ConnectivityManager.TYPE_WIFI;
             if(!isWifi) continue;
-            float[] color = isWifi ? segmentColor :
+            float[] color = isWifi ? openWifiColor :
+                                     new float[] {0.2f, 0.2f, 0.2f, 1.f};
+            
+            long startTs = i.getStartTimestamp();
+            Date startDate = new Date(startTs);
+            int startHr = startDate.getHours();
+            long endTs = i.getEndTimestamp();
+            Date endDate = new Date(endTs);
+            int endHr = endDate.getHours();
+            
+            float startAngle = 0;
+            if(endHr < startHr) {
+                startAngle = hourToAngle(0);
+            } else {
+                startAngle = timestampToAngle(startTs);
+            }
+            
+            float endAngle = timestampToAngle(i.getEndTimestamp());
+            if(startAngle < 0.f || endAngle < 0.f) continue;
+            DonutSegment seg = new DonutSegment(innerRadiusList[history], outerRadiusList[history], startAngle, endAngle, color, y, history);
+            seg.setMaterial(material);
+            
+            if(mShowHistory || history == 0) {
+                addChild(seg);
+            }
+            
+            if(history > 0) {
+                historySegments.add(seg);
+            }
+        }
+    }
+    
+    private void drawUnusedWifiCoverage(int history){
+    	SimpleMaterial material = new SimpleMaterial();
+    	material.setUseColor(true);
+    	
+    	List<UnusedWifiInterval> ivals = collapseUnusedWifiEvents(history);
+        for(UnusedWifiInterval i : ivals) {
+            MyLog.d(i.getEvent().toString());
+            boolean isOpen = i.getEvent().getWifiSecurity() == UnusedWifiEvent.WIFI_OPEN;
+            if(!isOpen) continue;
+            float[] color = isOpen ? segmentColor :
                                      new float[] {0.2f, 0.2f, 0.2f, 1.f};
             
             long startTs = i.getStartTimestamp();
@@ -265,6 +310,45 @@ public class ViewDataRenderer extends RajawaliRenderer {
         }
         if(currEvent != null)
             ivals.add(new TransitionInterval(currEvent.getTimestamp(), history == 0 ? System.currentTimeMillis() : midnight2, currEvent));
+        return ivals;
+    }
+    
+    private List<UnusedWifiInterval> collapseUnusedWifiEvents(int history) {
+        List<UnusedWifiInterval> ivals = new ArrayList<UnusedWifiInterval>();
+        
+        long now = System.currentTimeMillis();
+        Date nowDate = new Date(now);
+        nowDate.setDate(nowDate.getDate()-history); // TODO - HACK - won't work across month boundaries!
+        nowDate.setHours(0);
+        long midnight1 = nowDate.getTime();
+        nowDate.setHours(23);
+        nowDate.setMinutes(59);
+        nowDate.setSeconds(59);
+        long midnight2 = nowDate.getTime();
+        
+        UnusedWifiEvent currEvent = null;
+        int lastUnusedWifi = -2;
+        List<UnusedWifiEvent> events = mDb.getUnusedWifiEvents(midnight1, midnight2);
+        UnusedWifiEvent last = mDb.getFirstUnusedWifiEventBefore(midnight1);
+        if(last != null) {
+            events.add(0, last);
+        }
+        for(UnusedWifiEvent e : events) {
+            if(lastUnusedWifi == -2) {
+                currEvent = e;
+                lastUnusedWifi = e.getWifiSecurity();
+                continue;
+            }
+            
+            if(lastUnusedWifi == e.getWifiSecurity()) 
+                continue;
+            
+            ivals.add(new UnusedWifiInterval(currEvent.getTimestamp(), e.getTimestamp(), currEvent));
+            lastUnusedWifi = e.getWifiSecurity();
+            currEvent = e;
+        }
+        if(currEvent != null)
+            ivals.add(new UnusedWifiInterval(currEvent.getTimestamp(), history == 0 ? System.currentTimeMillis() : midnight2, currEvent));
         return ivals;
     }
     
