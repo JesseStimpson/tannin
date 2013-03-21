@@ -46,8 +46,39 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/date_text"
         android:layout_centerHorizontal="true"
-        android:paddingTop="51dp"
+        android:paddingTop="53dp"
         android:text="12A"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <TextView
+        android:id="@+id/pm12"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/current_time"
+        android:layout_centerHorizontal="true"
+        android:paddingTop="271dp"
+        android:text="12P"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <TextView
+        android:id="@+id/am6"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/current_time"
+        android:layout_toRightOf="@+id/date_text"
+        android:paddingLeft="74dp"
+        android:text="6A"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <TextView
+        android:id="@+id/pm6"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/current_time"
+        android:layout_alignBottom="@+id/current_time"
+        android:layout_toLeftOf="@+id/date_text"
+        android:paddingRight="73dp"
+        android:text="6P"
         android:textAppearance="?android:attr/textAppearanceSmall" />
 
 </RelativeLayout>
