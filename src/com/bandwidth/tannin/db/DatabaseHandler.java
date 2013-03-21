@@ -3,6 +3,7 @@ package com.bandwidth.tannin.db;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.bandwidth.tannin.data.CallEvent;
 import com.bandwidth.tannin.data.TransitionEvent;
 
 import android.content.ContentValues;
@@ -13,15 +14,17 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class DatabaseHandler extends SQLiteOpenHelper {
     
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
     private static final String NAME = "tannin.db";
     
     private static final String TABLE_TRANSITIONS = "transitions";
+    private static final String TABLE_CALLS = "calls";
     
     private static final String KEY_ID = "id";
     private static final String KEY_TIMESTAMP = "timestamp";
     private static final String KEY_CONNECTIVITY_TYPE = "connectivity_type";
     private static final String KEY_WIFI_AVAILABLE = "wifi_available";
+    private static final String KEY_CALL_STATE = "call_state";
     
     private static final String[] TRANSITIONS_PROJECTION = new String[]{
         KEY_ID,
@@ -30,10 +33,20 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         KEY_WIFI_AVAILABLE
     };
     
+    private static final String[] CALLS_PROJECTION = new String[]{
+        KEY_ID,
+        KEY_TIMESTAMP,
+        KEY_CALL_STATE
+    };
+    
     private static final int TRANSITIONS_COLUMN_ID = 0;
     private static final int TRANSITIONS_COLUMN_TIMESTAMP = 1;
     private static final int TRANSITIONS_COLUMN_CONNECTIVITY_TYPE = 2;
     private static final int TRANSITIONS_COLUMN_WIFI_AVAILABLE = 3;
+    
+    private static final int CALLS_COLUMN_ID = 0;
+    private static final int CALLS_COLUMN_TIMESTAMP = 1;
+    private static final int CALLS_COLUMN_CALL_STATE = 2;
     
     public DatabaseHandler(Context context) {
         super(context, NAME, null, VERSION);
@@ -41,6 +54,11 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
+        createTransitions(db);
+        createCalls(db);
+    }
+    
+    private void createTransitions(SQLiteDatabase db) {
         String CREATE_TRANSITIONS_TABLE = "CREATE TABLE " + TABLE_TRANSITIONS + "("
                 + KEY_ID + " INTEGER PRIMARY KEY, " 
                 + KEY_TIMESTAMP + " INTEGER, "
@@ -48,12 +66,35 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         		+ KEY_WIFI_AVAILABLE + " INTEGER" + ")";
         db.execSQL(CREATE_TRANSITIONS_TABLE);
     }
+    
+    private void createCalls(SQLiteDatabase db) {
+        String CREATE_CALLS_TABLE = "CREATE TABLE " + TABLE_CALLS + "("
+                + KEY_ID + " INTEGER PRIMARY KEY, "
+                + KEY_TIMESTAMP + " INTEGER, "
+                + KEY_CALL_STATE + " INTEGER" + ")";
+        db.execSQL(CREATE_CALLS_TABLE);
+        
+    }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if(oldVersion == 1 && newVersion == 2) {
+            createCalls(db);
+            return;
+        }
+        dropTransitions(db);
+        dropCalls(db);
+        onCreate(db);
+    }
+    
+    private void dropTransitions(SQLiteDatabase db) {
         String DROP_TRANSITIONS_TABLE = "DROP TABLE IF EXISTS " + TABLE_TRANSITIONS;
         db.execSQL(DROP_TRANSITIONS_TABLE);
-        onCreate(db);
+    }
+    
+    private void dropCalls(SQLiteDatabase db) {
+        String DROP_TRANSITIONS_TABLE = "DROP TABLE IF EXISTS " + TABLE_CALLS;
+        db.execSQL(DROP_TRANSITIONS_TABLE);
     }
     
     public void addTransitionEvent(TransitionEvent event) {
@@ -63,6 +104,15 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         values.put(KEY_CONNECTIVITY_TYPE, event.getConnectivityType());
         
         db.insert(TABLE_TRANSITIONS, null, values);
+        db.close();
+    }
+    
+    public void addCallEvent(CallEvent event) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(KEY_TIMESTAMP, event.getTimestamp());
+        values.put(KEY_CALL_STATE, event.getCallState());
+        db.insert(TABLE_CALLS, null, values);
         db.close();
     }
     
@@ -84,6 +134,21 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return event;
     }
     
+    public CallEvent getCallEvent(int id) {
+        SQLiteDatabase db = getReadableDatabase();
+        
+        Cursor cursor = db.query(TABLE_CALLS, CALLS_PROJECTION, KEY_ID + "=?",
+                new String[] { String.valueOf(id) }, null, null, null, null);
+        if(cursor!=null)
+            cursor.moveToFirst();
+        
+        int idInt = Integer.parseInt(cursor.getString(CALLS_COLUMN_ID));
+        long timestamp = Long.parseLong(cursor.getString(CALLS_COLUMN_TIMESTAMP));
+        int callType = Integer.parseInt(cursor.getString(CALLS_COLUMN_CALL_STATE));
+        
+        return new CallEvent(idInt, timestamp, callType);
+    }
+    
     public List<TransitionEvent> getAllTransitionEvents() {
         List<TransitionEvent> eventList = new ArrayList<TransitionEvent>();
         String selectQuery = "SELECT * FROM " + TABLE_TRANSITIONS;
@@ -96,12 +161,12 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 int idInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_ID));
                 long timestamp = Long.parseLong(cursor.getString(TRANSITIONS_COLUMN_TIMESTAMP));
                 int connectivityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_CONNECTIVITY_TYPE));
-                int wifiAvailabilityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_WIFI_AVAILABLE));
+                //int wifiAvailabilityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_WIFI_AVAILABLE));
                 
                 TransitionEvent event = new TransitionEvent(idInt, 
                         timestamp,
                         connectivityInt,
-                        wifiAvailabilityInt);
+                        -1);
                 eventList.add(event);
             } while(cursor.moveToNext());
         }
@@ -127,6 +192,28 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                         timestamp,
                         connectivityInt,
                         wifiAvailabilityInt);
+                eventList.add(event);
+            } while(cursor.moveToNext());
+        }
+        return eventList;
+    }
+    
+    public List<CallEvent> getAllCallEvents() {
+        List<CallEvent> eventList = new ArrayList<CallEvent>();
+        String selectQuery = "SELECT * FROM " + TABLE_CALLS;
+        
+        SQLiteDatabase db = getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        
+        if(cursor.moveToFirst()) {
+            do {
+                int idInt = Integer.parseInt(cursor.getString(CALLS_COLUMN_ID));
+                long timestamp = Long.parseLong(cursor.getString(CALLS_COLUMN_TIMESTAMP));
+                int callType = Integer.parseInt(cursor.getString(CALLS_COLUMN_CALL_STATE));
+                
+                CallEvent event = new CallEvent(idInt, 
+                        timestamp,
+                        callType);
                 eventList.add(event);
             } while(cursor.moveToNext());
         }
