@@ -18,6 +18,7 @@
             android:name=".EventBroadcastReceiver">
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+                <action android:name="android.net.wifi.SCAN_RESULTS"/>
             </intent-filter>
         </receiver>
         
