@@ -38,6 +38,15 @@ public class ViewDataActivity extends RajawaliFragmentActivity {
             }
         });
         
+        TextView currentTime = (TextView)findViewById(R.id.current_time);
+        Date now = new Date(System.currentTimeMillis());
+        int hrs = now.getHours();
+        boolean pm = hrs >= 12;
+        hrs = hrs % 12;
+        int mins = now.getMinutes();
+        String hrPad = hrs < 10 ? "0" : "";
+        String minPad = mins < 10 ? "0" : "";
+        currentTime.setText(hrPad + hrs + ":" + minPad + mins + (pm ? "P" : "A"));
     }
     
     private String buildDateString(int month, int date) {
