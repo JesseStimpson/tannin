@@ -64,6 +64,10 @@ public class EventBroadcastReceiver extends BroadcastReceiver {
     	final String[] securityModes = { "WEP", "PSK", "EAP" };
     	boolean secure = false;
     	
+    	if(results.size() == 0){
+    		return UnusedWifiEvent.WIFI_DOES_NOT_EXIST;
+    	}
+    	
     	for(int i = 0; i < results.size(); i++) {
     		for(int j = 0; j < securityModes.length; j++) {
     			secure = false;
