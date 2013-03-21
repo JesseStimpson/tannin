@@ -3,6 +3,7 @@ package com.bandwidth.tannin;
 import com.bandwidth.tannin.data.CallEvent;
 import java.util.List;
 
+import com.bandwidth.tannin.data.SmsEvent;
 import com.bandwidth.tannin.data.TransitionEvent;
 import com.bandwidth.tannin.data.UnusedWifiEvent;
 import com.bandwidth.tannin.db.DatabaseHandler;
@@ -12,7 +13,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-
+import android.os.Bundle;
 import android.telephony.TelephonyManager;
 
 import android.net.wifi.ScanResult;
@@ -21,6 +22,8 @@ import android.net.wifi.WifiManager;
 public class EventBroadcastReceiver extends BroadcastReceiver {
     private Context mContext;
     private DatabaseHandler mDbHandler = null;
+    
+    private static final String SMS_RECEIVED_ACTION = "android.provider.Telephony.SMS_RECEIVED";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -34,6 +37,8 @@ public class EventBroadcastReceiver extends BroadcastReceiver {
             handleConnectivityAction(intent);
         } else if (intent.getAction().equals(TelephonyManager.ACTION_PHONE_STATE_CHANGED)) {
             handlePhoneState(intent);
+        } else if (intent.getAction().equals(SMS_RECEIVED_ACTION)) {
+        	handleSmsReceived(intent);
         }
         if(intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
         	if(connectivityTypeNotWifi()) {
@@ -107,4 +112,13 @@ public class EventBroadcastReceiver extends BroadcastReceiver {
     	}
     }
 
+    private void handleSmsReceived(Intent intent) {
+    	Bundle bundle = intent.getExtras();
+    	if (bundle == null) {
+    		return;
+    	}
+
+    	SmsEvent event = new SmsEvent(-1, System.currentTimeMillis(), SmsEvent.INCOMING);
+    	mDbHandler.addSmsEvent(event);
+    }
 }

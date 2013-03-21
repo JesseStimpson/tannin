@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.bandwidth.tannin.data.CallEvent;
+import com.bandwidth.tannin.data.SmsEvent;
 import com.bandwidth.tannin.data.TransitionEvent;
 import com.bandwidth.tannin.data.UnusedWifiEvent;
 
@@ -22,6 +23,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String TABLE_TRANSITIONS = "transitions";
     private static final String TABLE_CALLS = "calls";
     private static final String TABLE_UNUSED_WIFI = "unused_wifi";
+    private static final String TABLE_SMS = "sms";
     
     private static final String KEY_ID = "id";
     private static final String KEY_TIMESTAMP = "timestamp";
@@ -29,6 +31,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String KEY_WIFI_AVAILABLE = "wifi_available";
     private static final String KEY_CALL_STATE = "call_state";
     private static final String KEY_WIFI_SECURITY = "wifi_security";
+    private static final String KEY_SMS_TYPE = "sms_type";
     
     private static final String[] TRANSITIONS_PROJECTION = new String[]{
         KEY_ID,
@@ -48,6 +51,12 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         KEY_CALL_STATE
     };
     
+    private static final String[] SMS_PROJECTION = new String[]{
+    	KEY_ID,
+    	KEY_TIMESTAMP,
+    	KEY_SMS_TYPE
+    };
+    
     private static final int TRANSITIONS_COLUMN_ID = 0;
     private static final int TRANSITIONS_COLUMN_TIMESTAMP = 1;
     private static final int TRANSITIONS_COLUMN_CONNECTIVITY_TYPE = 2;
@@ -60,6 +69,10 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final int CALLS_COLUMN_TIMESTAMP = 1;
     private static final int CALLS_COLUMN_CALL_STATE = 2;
     
+    private static final int SMS_COLUMN_ID = 0;
+    private static final int SMS_COLUMN_TIMESTAMP = 1;
+    private static final int SMS_COLUMN_TYPE = 2;
+    
     public DatabaseHandler(Context context) {
         super(context, NAME, null, VERSION);
     }
@@ -68,6 +81,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         createTransitions(db);
         createCalls(db);
+        createSms(db);
     }
     
     private void createTransitions(SQLiteDatabase db) {
@@ -92,6 +106,16 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         
     }
 
+    private void createSms(SQLiteDatabase db) {
+        String CREATE_SMS_TABLE = "CREATE TABLE " + TABLE_SMS + "("
+                + KEY_ID + " INTEGER PRIMARY KEY, "
+                + KEY_TIMESTAMP + " INTEGER, "
+                + KEY_SMS_TYPE + " INTEGER" + ")";
+        db.execSQL(CREATE_SMS_TABLE);
+        
+    }
+    
+    
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if(oldVersion == 1 && newVersion == 2) {
@@ -100,6 +124,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         }
         dropTransitions(db);
         dropCalls(db);
+        dropSms(db);
         onCreate(db);
     }
     
@@ -113,6 +138,12 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private void dropCalls(SQLiteDatabase db) {
         String DROP_TRANSITIONS_TABLE = "DROP TABLE IF EXISTS " + TABLE_CALLS;
         db.execSQL(DROP_TRANSITIONS_TABLE);
+        onCreate(db);
+    }
+    
+    private void dropSms(SQLiteDatabase db) {
+        String DROP_SMS_TABLE = "DROP TABLE IF EXISTS " + TABLE_SMS;
+        db.execSQL(DROP_SMS_TABLE);
         onCreate(db);
     }
     
@@ -143,6 +174,15 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     	
     	db.insert(TABLE_UNUSED_WIFI, null, values);
     	db.close();
+    }
+    
+    public void addSmsEvent(SmsEvent event) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(KEY_TIMESTAMP, event.getTimestamp());
+        values.put(KEY_SMS_TYPE, event.getType());
+        db.insert(TABLE_SMS, null, values);
+        db.close();
     }
     
     public TransitionEvent getTransitionEvent(int id) {
@@ -190,6 +230,21 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     	
     	UnusedWifiEvent event = new UnusedWifiEvent(idInt, timestamp, unusedWifiInt);
     	return event;
+    }
+    
+    public SmsEvent getSmsEvent(int id) {
+        SQLiteDatabase db = getReadableDatabase();
+        
+        Cursor cursor = db.query(TABLE_SMS, SMS_PROJECTION, KEY_ID + "=?",
+                new String[] { String.valueOf(id) }, null, null, null, null);
+        if(cursor!=null)
+            cursor.moveToFirst();
+        
+        int idInt = Integer.parseInt(cursor.getString(SMS_COLUMN_ID));
+        long timestamp = Long.parseLong(cursor.getString(SMS_COLUMN_TIMESTAMP));
+        int type = Integer.parseInt(cursor.getString(SMS_COLUMN_TYPE));
+        
+        return new SmsEvent(idInt, timestamp, type);
     }
     
     public List<TransitionEvent> getAllTransitionEvents() {
@@ -335,6 +390,68 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return eventList;
     }
     
+    public List<SmsEvent> getAllSmsEvents() {
+        List<SmsEvent> eventList = new ArrayList<SmsEvent>();
+        String selectQuery = "SELECT * FROM " + TABLE_SMS;
+        
+        SQLiteDatabase db = getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        
+        if(cursor.moveToFirst()) {
+            do {
+                int idInt = Integer.parseInt(cursor.getString(SMS_COLUMN_ID));
+                long timestamp = Long.parseLong(cursor.getString(SMS_COLUMN_TIMESTAMP));
+                int typeInt = Integer.parseInt(cursor.getString(SMS_COLUMN_TYPE));
+                
+                SmsEvent event = new SmsEvent(idInt, 
+                        timestamp,
+                        typeInt);
+                eventList.add(event);
+            } while(cursor.moveToNext());
+        }
+        return eventList;
+    }
+    
+    public SmsEvent getFirstSmsEventBefore(long timestamp) {
+        List<SmsEvent> eventList = new ArrayList<SmsEvent>();
+        String selectQuery = "SELECT * FROM " + TABLE_SMS + " WHERE "+KEY_TIMESTAMP+" < ?";
+        String [] selectArgs = new String[] {String.valueOf(timestamp) };
+        
+        SQLiteDatabase db = getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, selectArgs);
+        if(cursor.moveToLast()) {
+            int idInt = Integer.parseInt(cursor.getString(SMS_COLUMN_ID));
+            long ts = Long.parseLong(cursor.getString(SMS_COLUMN_TIMESTAMP));
+            int typeInt = Integer.parseInt(cursor.getString(SMS_COLUMN_TYPE));
+            return new SmsEvent(idInt, ts, typeInt);
+        }
+        return null;
+    }
+    
+    public List<SmsEvent> getSmsEvents(long fromTimestamp, long toTimestamp) {
+        List<SmsEvent> eventList = new ArrayList<SmsEvent>();
+        String selectQuery = "SELECT * FROM " + TABLE_SMS + " WHERE "+KEY_TIMESTAMP+" >= ? AND "+KEY_TIMESTAMP+" <= ? ";
+        String [] selectArgs = new String[] {String.valueOf(fromTimestamp), String.valueOf(toTimestamp)};
+        
+        SQLiteDatabase db = getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, selectArgs);
+        
+        if(cursor.moveToFirst()) {
+            do {
+                int idInt = Integer.parseInt(cursor.getString(SMS_COLUMN_ID));
+                long timestamp = Long.parseLong(cursor.getString(SMS_COLUMN_TIMESTAMP));
+                int typeInt = Integer.parseInt(cursor.getString(SMS_COLUMN_TYPE));
+                
+                SmsEvent event = new SmsEvent(idInt, 
+                        timestamp,
+                        typeInt);
+
+                eventList.add(event);
+            } while(cursor.moveToNext());
+        }
+        return eventList;
+    }
+    
     public int getTransitionEventCount() {
         String countQuery = "SELECT * FROM " + TABLE_TRANSITIONS;
         SQLiteDatabase db = getReadableDatabase();
@@ -351,6 +468,14 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     	return cursor.getCount();
     }
     
+    public int getSmsEventCount() {
+        String countQuery = "SELECT * FROM " + TABLE_SMS;
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(countQuery, null);
+        cursor.close();
+        return cursor.getCount();
+    }
+    
     public void deleteTransitionEvent(TransitionEvent event) {
         SQLiteDatabase db = getWritableDatabase();
         db.delete(TABLE_TRANSITIONS, KEY_ID + " = ?",
@@ -364,4 +489,10 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     	db.close();
     }
 
+    public void deleteSmsEvent(SmsEvent event) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.delete(TABLE_SMS, KEY_ID + " = ?",
+                new String[] { String.valueOf(event.getId()) });
+        db.close();
+    }
 }
