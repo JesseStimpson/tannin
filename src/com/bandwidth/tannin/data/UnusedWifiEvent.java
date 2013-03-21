@@ -13,8 +13,8 @@ public class UnusedWifiEvent {
     private long timestamp;
     private int wifiSecurity;
     
-    public static final int WIFI_PROTECTED = 2;
-    public static final int WIFI_OPEN = 1;
+    public static final int WIFI_PROTECTED = 1;
+    public static final int WIFI_OPEN = 2;
     public static final int WIFI_DOES_NOT_EXIST = 0;
     
     public UnusedWifiEvent(int id, long timestamp, int wifiSecurity) {
