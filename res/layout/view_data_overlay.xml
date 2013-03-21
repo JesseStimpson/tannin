@@ -14,7 +14,7 @@
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="110dp"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:background="@color/dark"
@@ -27,8 +27,77 @@
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
             android:text="History" />
+        
+        <TextView 
+            android:id="@+id/current_network"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentLeft="true"
+            android:paddingLeft="5dp"
+            android:text="Current Wi-Fi Network"
+            android:textColor="#FFFFFF" />
+        
+        <TextView
+            android:id="@+id/current_network_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/current_network"
+            android:layout_alignParentLeft="true"
+            android:paddingLeft="10dp"
+            android:textColor="#FFFFFF"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="Skynet" />
+        
+		<TextView
+            android:id="@+id/signal_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/current_network_name"
+            android:layout_alignParentLeft="true"
+            android:paddingLeft="15dp"
+            android:paddingTop="10dp"
+            android:textColor="#FFFFFF"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="Signal:" />
 
-    </RelativeLayout>
+		<TextView
+            android:id="@+id/signal_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/signal_label"
+            android:layout_below="@+id/current_network_name"
+            android:paddingTop="6dp"
+            android:paddingLeft="10dp"
+            android:textColor="#FFFFFF"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="Excellent" />
+		
+		<TextView
+            android:id="@+id/quality_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/signal_label"
+            android:layout_alignParentLeft="true"
+            android:paddingLeft="15dp"
+            android:paddingTop="5dp"
+            android:textColor="#FFFFFF"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="Quality:" />
+
+		<TextView
+            android:id="@+id/quality_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/quality_label"
+            android:layout_below="@+id/signal_label"
+            android:paddingTop="1dp"
+            android:paddingLeft="5dp"
+            android:textColor="#FFFFFF"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="Acceptable" />
+					
+	</RelativeLayout>
 
     <TextView
         android:id="@+id/current_time"
