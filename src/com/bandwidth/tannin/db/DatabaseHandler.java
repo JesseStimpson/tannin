@@ -214,9 +214,25 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return eventList;
     }
     
+    public TransitionEvent getFirstTransitionEventBefore(long timestamp) {
+        List<TransitionEvent> eventList = new ArrayList<TransitionEvent>();
+        String selectQuery = "SELECT * FROM " + TABLE_TRANSITIONS + " WHERE "+KEY_TIMESTAMP+" < ?";
+        String [] selectArgs = new String[] {String.valueOf(timestamp) };
+        
+        SQLiteDatabase db = getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, selectArgs);
+        if(cursor.moveToLast()) {
+            int idInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_ID));
+            long ts = Long.parseLong(cursor.getString(TRANSITIONS_COLUMN_TIMESTAMP));
+            int connectivityInt = Integer.parseInt(cursor.getString(TRANSITIONS_COLUMN_CONNECTIVITY_TYPE));
+            return new TransitionEvent(idInt, ts, connectivityInt);
+        }
+        return null;
+    }
+    
     public List<TransitionEvent> getTransitionEvents(long fromTimestamp, long toTimestamp) {
         List<TransitionEvent> eventList = new ArrayList<TransitionEvent>();
-        String selectQuery = "SELECT * FROM " + TABLE_TRANSITIONS + " WHERE KEY_TIMESTAMP >= ? AND KEY_TIMESTAMP <= ? ";
+        String selectQuery = "SELECT * FROM " + TABLE_TRANSITIONS + " WHERE "+KEY_TIMESTAMP+" >= ? AND "+KEY_TIMESTAMP+" <= ? ";
         String [] selectArgs = new String[] {String.valueOf(fromTimestamp), String.valueOf(toTimestamp)};
         
         SQLiteDatabase db = getWritableDatabase();
@@ -231,6 +247,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 TransitionEvent event = new TransitionEvent(idInt, 
                         timestamp,
                         connectivityInt);
+
                 eventList.add(event);
             } while(cursor.moveToNext());
         }
@@ -277,6 +294,45 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     		} while(cursor.moveToNext());
     	}
     	return eventList;
+    }
+    
+    public CallEvent getFirstCallEventBefore(long timestamp) {
+        List<CallEvent> eventList = new ArrayList<CallEvent>();
+        String selectQuery = "SELECT * FROM " + TABLE_CALLS + " WHERE "+KEY_TIMESTAMP+" < ?";
+        String [] selectArgs = new String[] {String.valueOf(timestamp) };
+        
+        SQLiteDatabase db = getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, selectArgs);
+        if(cursor.moveToLast()) {
+            int idInt = Integer.parseInt(cursor.getString(CALLS_COLUMN_ID));
+            long ts = Long.parseLong(cursor.getString(CALLS_COLUMN_TIMESTAMP));
+            int callState = Integer.parseInt(cursor.getString(CALLS_COLUMN_CALL_STATE));
+            return new CallEvent(idInt, ts, callState);
+        }
+        return null;
+    }
+    
+    public List<CallEvent> getCallEvents(long fromTimestamp, long toTimestamp) {
+        List<CallEvent> eventList = new ArrayList<CallEvent>();
+        String selectQuery = "SELECT * FROM " + TABLE_CALLS + " WHERE "+KEY_TIMESTAMP+" >= ? AND "+KEY_TIMESTAMP+" <= ? ";
+        String [] selectArgs = new String[] {String.valueOf(fromTimestamp), String.valueOf(toTimestamp)};
+        
+        SQLiteDatabase db = getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, selectArgs);
+        
+        if(cursor.moveToFirst()) {
+            do {
+                int idInt = Integer.parseInt(cursor.getString(CALLS_COLUMN_ID));
+                long timestamp = Long.parseLong(cursor.getString(CALLS_COLUMN_TIMESTAMP));
+                int callState = Integer.parseInt(cursor.getString(CALLS_COLUMN_CALL_STATE));
+                
+                CallEvent event = new CallEvent(idInt, 
+                        timestamp,
+                        callState);
+                eventList.add(event);
+            } while(cursor.moveToNext());
+        }
+        return eventList;
     }
     
     public int getTransitionEventCount() {

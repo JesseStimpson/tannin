@@ -4,7 +4,9 @@ import java.util.Date;
 
 import android.os.Bundle;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import rajawali.RajawaliFragmentActivity;
@@ -27,6 +29,15 @@ public class ViewDataActivity extends RajawaliFragmentActivity {
         int monthInt = date.getMonth();
         int dateInt = date.getDate();
         dateText.setText(buildDateString(monthInt, dateInt));
+        
+        Button showHistory = (Button) findViewById(R.id.show_history);
+        showHistory.setOnClickListener(new OnClickListener() {
+            
+            public void onClick(View v) {
+                mRenderer.toggleHistory();
+            }
+        });
+        
     }
     
     private String buildDateString(int month, int date) {

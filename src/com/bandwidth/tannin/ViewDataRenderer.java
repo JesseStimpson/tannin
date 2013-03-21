@@ -18,6 +18,7 @@ import com.bandwidth.tannin.rajawali.DonutSegment;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.os.SystemClock;
 import android.telephony.TelephonyManager;
 import android.view.Display;
 import android.view.WindowManager;
@@ -54,8 +55,9 @@ public class ViewDataRenderer extends RajawaliRenderer {
     
     private double aspectRatio = 1f;
     
-    private float innerRadius = 0.5f*(1-117/361.f);
-    private float outerRadius = 0.5f*(1-35/361.f);
+    private float[] innerRadiusList = {0.5f*(1-117/361.f), 0.5f*(1-168/361.f), 0.5f*(1-209/361.f)};
+    private float[] outerRadiusList = {0.5f*(1-35/361.f), 0.5f*(1-127/361.f), 0.5f*(1-168/361.f)};
+    
     private float bgInRadius = 0.5f*(1-127/361.f);
     private float bgOutRadius = 0.5f*(1-24/361.f);
     
@@ -69,12 +71,37 @@ public class ViewDataRenderer extends RajawaliRenderer {
     
     private float y = 0.f;
     
+    boolean mShowHistory = false;
+    List<DonutSegment> historySegments = new ArrayList<DonutSegment>();
+    
+    long initialDrawTime = 0L;
+    DonutSegment revealer = null;
+    
     private float timestampToAngle(long timestamp) {
         Date date = new Date(timestamp);
         int hr = date.getHours();
         int m = date.getMinutes();
         int s = date.getSeconds();
         return hourToAngle(hr+m/60.0+s/(60.0*60.0));
+    }
+    
+    public void showHistory(boolean show) {
+        mShowHistory = show;
+        if(!mShowHistory) {
+            for(DonutSegment seg : historySegments) {
+                if(hasChild(seg))
+                    removeChild(seg);
+            }
+        } else {
+            for(DonutSegment seg : historySegments) {
+               if(!hasChild(seg))
+                   addChild(seg);
+            }
+        }
+    }
+    
+    public void toggleHistory() {
+        showHistory(!mShowHistory);
     }
     
     private float hourToAngle(double hr) {
@@ -91,7 +118,8 @@ public class ViewDataRenderer extends RajawaliRenderer {
         super.initScene();
         
         drawBackground();
-        drawDonutSegments();
+        drawWifiCoverage(0);
+        drawHistory();
         drawCallSegments();
         drawAnnotations();
         drawForeground();
@@ -117,23 +145,17 @@ public class ViewDataRenderer extends RajawaliRenderer {
         seg = new DonutSegment(0.f, fgInnerRadius, 0.f, (float)(2*Math.PI), new float[] {51f/255,51f/255,51f/255,1.f}, y, -1.2f);
         seg.setMaterial(material);
         addChild(seg);
+        
+        revealer = new DonutSegment(bgInRadius, fgOuterRadius, 0.f, (float)(2*Math.PI), new float[] {1.f,1.f,1.f,1.f}, y, -1.3f);
+        addChild(revealer);
+        initialDrawTime = SystemClock.elapsedRealtime();
     }
     
-    private void drawDonutSegments() {
+    private void drawWifiCoverage(int history) {
         SimpleMaterial material = new SimpleMaterial();
         material.setUseColor(true);
         
-        /*
-        DonutSegment seg = new DonutSegment(innerRadius, 
-                outerRadius, 
-                hourToAngle(22),
-                hourToAngle(23.5),
-                segmentColor, y, 0);
-        seg.setMaterial(material);
-        addChild(seg);
-        */
-        
-        List<TransitionInterval> ivals = collapseEvents();
+        List<TransitionInterval> ivals = collapseCoverageEvents(history);
         for(TransitionInterval i : ivals) {
             MyLog.d(i.getEvent().toString());
             boolean isWifi = i.getEvent().getConnectivityType() == ConnectivityManager.TYPE_WIFI;
@@ -157,9 +179,23 @@ public class ViewDataRenderer extends RajawaliRenderer {
             
             float endAngle = timestampToAngle(i.getEndTimestamp());
             if(startAngle < 0.f || endAngle < 0.f) continue;
-            DonutSegment seg = new DonutSegment(innerRadius, outerRadius, startAngle, endAngle, color, y, 0);
+            DonutSegment seg = new DonutSegment(innerRadiusList[history], outerRadiusList[history], startAngle, endAngle, color, y, history);
             seg.setMaterial(material);
-            addChild(seg);
+            
+            if(mShowHistory || history == 0) {
+                addChild(seg);
+            }
+            
+            if(history > 0) {
+                historySegments.add(seg);
+            }
+        }
+    }
+    
+    private void drawHistory() {
+        for(int i = 0; i < innerRadiusList.length; ++i) {
+            int history = (innerRadiusList.length-1)-i;
+            drawWifiCoverage(history);
         }
     }
     
@@ -180,6 +216,7 @@ public class ViewDataRenderer extends RajawaliRenderer {
     }
     
     private void drawAnnotations() {
+        /*
         SimpleMaterial material = new SimpleMaterial();
         material.setUseColor(true);
         int numHours = 1+hourMax-hourMin;
@@ -194,14 +231,29 @@ public class ViewDataRenderer extends RajawaliRenderer {
             tick.setMaterial(material);
             addChild(tick);
         }
+        */
     }
     
-    private List<TransitionInterval> collapseEvents() {
+    private List<TransitionInterval> collapseCoverageEvents(int history) {
         List<TransitionInterval> ivals = new ArrayList<TransitionInterval>();
+        
+        long now = System.currentTimeMillis();
+        Date nowDate = new Date(now);
+        nowDate.setDate(nowDate.getDate()-history); // TODO - HACK - won't work across month boundaries!
+        nowDate.setHours(0);
+        long midnight1 = nowDate.getTime();
+        nowDate.setHours(23);
+        nowDate.setMinutes(59);
+        nowDate.setSeconds(59);
+        long midnight2 = nowDate.getTime();
         
         TransitionEvent currEvent = null;
         int lastConnectivity = -2;
-        List<TransitionEvent> events = mDb.getAllTransitionEvents();
+        List<TransitionEvent> events = mDb.getTransitionEvents(midnight1, midnight2);
+        TransitionEvent last = mDb.getFirstTransitionEventBefore(midnight1);
+        if(last != null) {
+            events.add(0, last);
+        }
         for(TransitionEvent e : events) {
             if(lastConnectivity == -2) {
                 currEvent = e;
@@ -217,16 +269,31 @@ public class ViewDataRenderer extends RajawaliRenderer {
             currEvent = e;
         }
         if(currEvent != null)
-            ivals.add(new TransitionInterval(currEvent.getTimestamp(), System.currentTimeMillis(), currEvent));
+            ivals.add(new TransitionInterval(currEvent.getTimestamp(), history == 0 ? System.currentTimeMillis() : midnight2, currEvent));
         return ivals;
     }
     
     private List<CallInterval> collapseCallEvents() {
         List<CallInterval> ivals = new ArrayList<CallInterval>();
         
+        long now = System.currentTimeMillis();
+        Date nowDate = new Date(now);
+        nowDate.setHours(0);
+        long midnight1 = nowDate.getTime();
+        nowDate.setHours(23);
+        nowDate.setMinutes(59);
+        nowDate.setSeconds(59);
+        long midnight2 = nowDate.getTime();
+        
         CallEvent currEvent = null;
         int lastState = -2;
-        List<CallEvent> events = mDb.getAllCallEvents();
+        List<CallEvent> events = mDb.getCallEvents(midnight1, midnight2);
+        
+        CallEvent last = mDb.getFirstCallEventBefore(midnight1);
+        if(last != null) {
+            events.add(0, last);
+        }
+
         for(CallEvent e : events) {
             if(lastState == -2) {
                 currEvent = e;
@@ -262,6 +329,9 @@ public class ViewDataRenderer extends RajawaliRenderer {
     @Override
     public void onDrawFrame(GL10 glUnused) {
         super.onDrawFrame(glUnused);
+        if(revealer != null) {
+            removeChild(revealer);
+            //revealer = new DonutSegment(bgInRadius, bgOutRadius, startAngle, endAngle, color, y, z)
+        }
     }
-
 }
