@@ -3,17 +3,22 @@ package com.bandwidth.tannin;
 import com.bandwidth.tannin.data.CallEvent;
 import java.util.List;
 
+import com.bandwidth.tannin.data.DataEvent;
 import com.bandwidth.tannin.data.SmsEvent;
 import com.bandwidth.tannin.data.TransitionEvent;
 import com.bandwidth.tannin.data.UnusedWifiEvent;
 import com.bandwidth.tannin.db.DatabaseHandler;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.TrafficStats;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.telephony.TelephonyManager;
 
 import android.net.wifi.ScanResult;
@@ -24,6 +29,17 @@ public class EventBroadcastReceiver extends BroadcastReceiver {
     private DatabaseHandler mDbHandler = null;
     
     private static final String SMS_RECEIVED_ACTION = "android.provider.Telephony.SMS_RECEIVED";
+    
+    private static final String ALARM_ACTION = EventBroadcastReceiver.class.getCanonicalName() + ".ALARM";
+    private static final long TARGET_SAMPLE_PERIOD_MSEC = 5*60*1000L;
+    
+    public static void setDataAlarm(Context context) {
+        AlarmManager am = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+        Intent i = new Intent(context, EventBroadcastReceiver.class);
+        i.setAction(ALARM_ACTION);
+        PendingIntent pi = PendingIntent.getBroadcast(context, 0, i, PendingIntent.FLAG_UPDATE_CURRENT);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), TARGET_SAMPLE_PERIOD_MSEC, pi);
+    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -39,11 +55,12 @@ public class EventBroadcastReceiver extends BroadcastReceiver {
             handlePhoneState(intent);
         } else if (intent.getAction().equals(SMS_RECEIVED_ACTION)) {
         	handleSmsReceived(intent);
-        }
-        if(intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
+        } else if(intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
         	if(connectivityTypeNotWifi()) {
         		handleWifiScanResultsAction(intent);
         	}
+        } else if (intent.getAction().equals(ALARM_ACTION)) {
+            handleDataAlarm();
         }
     }
     
@@ -120,5 +137,44 @@ public class EventBroadcastReceiver extends BroadcastReceiver {
 
     	SmsEvent event = new SmsEvent(-1, System.currentTimeMillis(), SmsEvent.INCOMING);
     	mDbHandler.addSmsEvent(event);
+    }
+    
+    private long getLastMobileRx() {
+        return PreferenceManager.getDefaultSharedPreferences(mContext).getLong("mobile_rx", -1L);
+    }
+    
+    private long getLastMobileTx() {
+        return PreferenceManager.getDefaultSharedPreferences(mContext).getLong("mobile_tx", -1L);
+    }
+    
+    private void setMobileRx(long m) {
+        PreferenceManager.getDefaultSharedPreferences(mContext).edit().putLong("mobile_rx", m).commit();
+    }
+    
+    private void setMobileTx(long m) {
+        PreferenceManager.getDefaultSharedPreferences(mContext).edit().putLong("mobile_tx", m).commit();
+    }
+    
+    private void handleDataAlarm() {
+        long mobileRx = TrafficStats.getMobileRxBytes();
+        long mobileTx = TrafficStats.getMobileTxBytes();
+        long lastMobileRx = getLastMobileRx();
+        long lastMobileTx = getLastMobileTx();
+        setMobileRx(mobileRx);
+        setMobileTx(mobileTx);
+        if(lastMobileRx < 0L || lastMobileTx < 0L) {
+            return;
+        }
+        
+        long mobileRxDiff = mobileRx >= lastMobileRx ? mobileRx - lastMobileRx : mobileRx;
+        long mobileTxDiff = mobileTx >= lastMobileTx ? mobileTx - lastMobileTx : mobileTx;
+        
+        MyLog.d("logging data event");
+        
+        mDbHandler.addDataEvent(new DataEvent(-1, 
+                System.currentTimeMillis(), 
+                DataEvent.IFACE_MOBILE, 
+                mobileRxDiff, 
+                mobileTxDiff));
     }
 }

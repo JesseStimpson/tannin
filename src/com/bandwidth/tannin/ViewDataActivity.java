@@ -43,6 +43,7 @@ public class ViewDataActivity extends RajawaliFragmentActivity {
         int hrs = now.getHours();
         boolean pm = hrs >= 12;
         hrs = hrs % 12;
+        if(hrs == 0) hrs = 12;
         int mins = now.getMinutes();
         String hrPad = hrs < 10 ? "0" : "";
         String minPad = mins < 10 ? "0" : "";
