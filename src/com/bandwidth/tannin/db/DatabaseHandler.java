@@ -101,6 +101,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         createTransitions(db);
         createCalls(db);
         createSms(db);
+        createData(db);
     }
     
     private void createTransitions(SQLiteDatabase db) {

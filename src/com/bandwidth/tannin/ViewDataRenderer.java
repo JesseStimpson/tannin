@@ -71,6 +71,7 @@ public class ViewDataRenderer extends RajawaliRenderer {
     private float fgInnerRadius = (160/722f)/2f;
     
     private float callRadius = fgOuterRadius+0.5f*(bgInRadius-fgOuterRadius);
+    private float minDataRadius = fgOuterRadius+0.43f*(bgInRadius-fgOuterRadius);
     private float smsRadius = fgOuterRadius+0.33f*(bgInRadius-fgOuterRadius);
     
     private float needleRadius = 0.495f;
@@ -304,6 +305,11 @@ public class ViewDataRenderer extends RajawaliRenderer {
         return Math.sqrt((2*area)/Math.abs(angle1-angle0));
     }
     
+    private double computeRadius2(double area, double angle0, double angle1, double r0) {
+        double a = Math.abs(angle0-angle1);
+        return Math.sqrt((2*area + a*r0*r0) / a);
+    }
+    
     private void drawDataIntervals() {
         SimpleMaterial material = new SimpleMaterial();
         material.setUseColor(true);
@@ -319,7 +325,7 @@ public class ViewDataRenderer extends RajawaliRenderer {
             if(numBytes == 0L) continue;
             float startAngle = timestampToAngle(i.getStartTimestamp());
             float endAngle = timestampToAngle(i.getEndTimestamp());
-            double radius = computeRadius(numBytes, startAngle, endAngle);
+            double radius = computeRadius2(numBytes, startAngle, endAngle, fgOuterRadius);
             if(radius > maxRadius) {
                 maxRadius = radius;
             }
@@ -333,9 +339,11 @@ public class ViewDataRenderer extends RajawaliRenderer {
             if(numBytes == 0L) continue;
             float startAngle = timestampToAngle(i.getStartTimestamp());
             float endAngle = timestampToAngle(i.getEndTimestamp());
-            double radius = scale*computeRadius(numBytes, startAngle, endAngle);
+            double radius = scale*computeRadius2(numBytes, startAngle, endAngle, fgOuterRadius);
+            radius = Math.max(radius, minDataRadius);
+            MyLog.d("radius="+radius);
             DonutSegment seg = new DonutSegment(
-                    0f, 
+                    fgOuterRadius, 
                     (float)(radius), 
                     startAngle, 
                     endAngle, 
